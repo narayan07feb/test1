@@ -1386,137 +1386,146 @@ public class HealthSafeIdLoginController extends ScopeBasedController {
 
 	}
 
-	private Object findSharedElement(Map<String, String> filterMap, boolean onlyEmail) throws Exception {
-		return healthSafeIdService.findSharedEmailCount(filterMap, onlyEmail).get();
-	}
+	private Resources findSharedElement(Map<String, String> filterMap, boolean onlyEmail) throws Exception {
+        return healthSafeIdService.findSharedEmailCount(filterMap, onlyEmail).get();
+    }
 
-	@RequestMapping(value = "/protected/userid/lookup", method = { RequestMethod.POST }, produces = {
-			"application/json" })
-	@ResponseBody
-	public Map<String, String> lookupUserId(@RequestBody Map<String, String> filter,
-			@RequestParam(value = AppConstants.OPTUMID_HEADER_TARGETPORTAL, required = true) String targetPortal,
-			@RequestParam String captchastring,
-			@RequestParam(value = AppConstants.OPTUMID_HEADER_LANGUAGE, required = false) String lang) {
-		{
+    @RequestMapping(value = "/protected/userid/lookup", method = {RequestMethod.POST}, produces = {
+            "application/json"})
+    @ResponseBody
+    public Map<String, String> lookupUserId(@RequestBody Map<String, String> filter,
+                                            @RequestParam(value = AppConstants.OPTUMID_HEADER_TARGETPORTAL, required = true) String targetPortal,
+                                            @RequestParam String captchastring,
+                                            @RequestParam(value = AppConstants.OPTUMID_HEADER_LANGUAGE, required = false) String lang) {
+        {
 
-			if (StringUtils.isEmpty(lang) || StringUtils.equalsIgnoreCase(lang, "null")) {
-				lang = getLang(sessionInfo());
-			}
-			String captchaId = request.getSession().getId();
-			logger.info("In /protected/captcha/valid/username request.getSession().getId():" + captchaId);
-			Boolean isCaptchaValid = CaptchaValidator.validateCaptchaForId(captchaId, captchastring);
-			// logger.info("In /protected/user/list isCaptchaValid:
-			// "+isCaptchaValid);
-			logger.info("In /protected/captcha/valid/username isCaptchaValid:" + isCaptchaValid);
-			logger.info("In /protected/captcha/valid/username captchaAttempts.isfrgtPwdMaxLimits():"
-					+ captchaAttempts.isfrgtPwdMaxLimits());
-			captchaAttempts.setIsfrgtUidCaptchaPassed(isCaptchaValid);
-			if (!captchaAttempts.isfrgtUidCaptchaPassed()) {
-				Map<String, String> response = new HashMap<String, String>();
-				response.put("code", "400");
-				response.put("description", "Invalid Captcha String");
-				return response;
-			}
-			Map<String, String> emailWrapper = new HashMap<String, String>();
-			String email = filter.get("email");
-			String dateOfBirth = filter.get("dateOfBirth");
-			Object emailResp = null;
-			// logger.info("In /protected/userid/lookup dateOfBirth:
-			// "+dateOfBirth);
-			// logger.info("In /protected/userid/lookup email:"+email);
-			try {
-				if (StringUtils.isNotBlank(email) && !EmailValidator.getInstance().isValid(email)) {
-					captchaAttempts.incrFrgtUidAttempts();
-					response.setStatus(HttpStatus.BAD_REQUEST.value());
+            if (StringUtils.isEmpty(lang) || StringUtils.equalsIgnoreCase(lang, "null")) {
+                lang = getLang(sessionInfo());
+            }
+            String captchaId = request.getSession().getId();
+            logger.info("In /protected/captcha/valid/username request.getSession().getId():" + captchaId);
+            Boolean isCaptchaValid = CaptchaValidator.validateCaptchaForId(captchaId, captchastring);
+            // logger.info("In /protected/user/list isCaptchaValid:
+            // "+isCaptchaValid);
+            logger.info("In /protected/captcha/valid/username isCaptchaValid:" + isCaptchaValid);
+            logger.info("In /protected/captcha/valid/username captchaAttempts.isfrgtPwdMaxLimits():"
+                    + captchaAttempts.isfrgtPwdMaxLimits());
+            captchaAttempts.setIsfrgtUidCaptchaPassed(isCaptchaValid);
+            if (!captchaAttempts.isfrgtUidCaptchaPassed()) {
+                Map<String, String> response = new HashMap<String, String>();
+                response.put("code", "400");
+                response.put("description", "Invalid Captcha String");
+                return response;
+            }
+            Map<String, String> emailWrapper = new HashMap<String, String>();
+            String email = filter.get("email");
+            String dateOfBirth = filter.get("dateOfBirth");
+            Object emailResp = null;
+            // logger.info("In /protected/userid/lookup dateOfBirth:
+            // "+dateOfBirth);
+            // logger.info("In /protected/userid/lookup email:"+email);
+            try {
+                if (StringUtils.isNotBlank(email) && !EmailValidator.getInstance().isValid(email)) {
+                    captchaAttempts.incrFrgtUidAttempts();
+                    response.setStatus(HttpStatus.BAD_REQUEST.value());
 
-				}
-				if (StringUtils.isNotBlank(dateOfBirth)
-						&& AuthenticationHelper.convertISOFormatToDate(dateOfBirth) == null) {
-					captchaAttempts.incrFrgtUidAttempts();
-					response.setStatus(HttpStatus.BAD_REQUEST.value());
+                }
+                if (StringUtils.isNotBlank(dateOfBirth)
+                        && AuthenticationHelper.convertISOFormatToDate(dateOfBirth) == null) {
+                    captchaAttempts.incrFrgtUidAttempts();
+                    response.setStatus(HttpStatus.BAD_REQUEST.value());
 
-				}
-				Object searchWithEmailOnly = findSharedElement(filter, false);
-				Object searchwithAllCerteria = findSharedElement(filter, true);
+                }
+                Resources searchwithAllCerteria = findSharedElement(filter, false);
+                Resources searchWithEmailOnly = findSharedElement(filter, true);
 
-				logger.info("search with email only " + searchWithEmailOnly);
-				logger.info("search with all citeria " + searchwithAllCerteria);
+                logger.info("search with email only " + searchWithEmailOnly);
+                logger.info("search with all citeria " + searchwithAllCerteria);
 
-				if (searchWithEmailOnly instanceof Integer && searchwithAllCerteria instanceof Integer) {
-					boolean sharedElement = (Integer) searchWithEmailOnly == (Integer) searchwithAllCerteria;
+                if (searchWithEmailOnly instanceof Resources && searchwithAllCerteria instanceof Resources) {
+                    if (searchwithAllCerteria == null || searchwithAllCerteria.getResource() == null || searchWithEmailOnly == null || searchWithEmailOnly.getResource() == null) {
+                        emailWrapper.put("code", "204");
+                        emailWrapper.put("description", "User is not found in records");
+                        return emailWrapper;
+                    }
 
-					emailResp = healthSafeIdService.getID(filter).get();
-					if ((emailResp instanceof String) && StringUtils.isNotBlank(emailResp.toString())) {
-						String portalBrand = targetPortal;
-						if (sessionInfo().getInboundParameter() != null && StringUtils.isBlank(portalBrand)) {
-							portalBrand = AppConstants
-									.getPortalBrand(sessionInfo().getInboundParameter().getTargetUrl());
-						}
-						logger.info("Shared element value "+sharedElement);
-						if (sharedElement) {
-							
-							String url = new StringBuilder(ConnectionSettings.getIamServer())
-									.append(ConnectionSettings.getIamForgetuserName()).append("username").append("?to=")
-									.append(java.net.URLEncoder.encode(StringUtils.defaultString(email)))
-									.append("&username=")
-									.append(java.net.URLEncoder.encode(StringUtils.defaultString((String) emailResp)))
-									.append("&").append(AppConstants.OPTUMID_HEADER_TARGETPORTAL).append("=")
-									.append(targetPortal).append("&").append(AppConstants.OPTUMID_HEADER_BRANDPORTAL)
-									.append("=").append(portalBrand).append("&")
-									.append(AppConstants.OPTUMID_HEADER_LANGUAGE).append("=")
-									.append(StringUtils.isEmpty(lang) || "null".equalsIgnoreCase(lang) ? "en" : lang)
-									.append("&userid=")
-									.append(java.net.URLEncoder.encode(StringUtils.defaultString((String) emailResp)))
-									.toString();
-							// String content =
-							// restTemplate.getForObject(url.trim(),String.class);
-							String content = ConnectionSettings.getRestClient(url.trim()).getAsJson(String.class);
-							if (StringUtils.containsIgnoreCase(content, "ERROR")) {
-								captchaAttempts.incrFrgtUidAttempts();
-								// logger.info("In /protected/userid/lookup
-								// forgotusername:
-								// Unable to send email to the user
-								// "+(String)emailResp);
-							}
-							
-							// logger.info("In /protected/userid/lookup
-							// forgotusername: Sent
-							// Email Successfully "+(String)emailResp);
-							emailWrapper.put("code", "200");
-							emailWrapper.put("description", "User found in records");
-							return emailWrapper;
-						} else {
-							emailWrapper.put("username", (String) emailResp);
-							logger.info("User found username" + emailResp);
-							
-							//get the respone here and send to the ui 
-							emailWrapper.put("code", "204");
-							emailWrapper.put("description", "User found in records");
-							return emailWrapper;
-						}
-					}
-				}
+                    int searchEmailCount = searchWithEmailOnly.getResource().size();
+                    int searchAllCriteriaCount = searchwithAllCerteria.getResource().size();
 
-			} catch (InterruptedException | ExecutionException e) {
-				e.printStackTrace();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			captchaAttempts.incrFrgtUidAttempts();
-			if ((emailResp instanceof com.optum.ogn.iam.model.Error)
-					&& StringUtils.equalsIgnoreCase(((Error) emailResp).getCode(), "404")) {
+                    boolean sharedElement = searchAllCriteriaCount == searchEmailCount;
 
-				emailWrapper.put("code", "404");
-				emailWrapper.put("description", "Multiple User Accounts Found, try by adding more filters");
-				return emailWrapper;
+                    emailResp = healthSafeIdService.parseResonse(searchwithAllCerteria);
+                    if ((emailResp instanceof String) && StringUtils.isNotBlank(emailResp.toString())) {
+                        String portalBrand = targetPortal;
+                        if (sessionInfo().getInboundParameter() != null && StringUtils.isBlank(portalBrand)) {
+                            portalBrand = AppConstants
+                                    .getPortalBrand(sessionInfo().getInboundParameter().getTargetUrl());
+                        }
+                        logger.info("Shared element value " + sharedElement);
+                        if (sharedElement) {
 
-			}
-			emailWrapper.put("code", "204");
-			emailWrapper.put("description", "User is not found in records");
-			return emailWrapper;
+                            String url = new StringBuilder(ConnectionSettings.getIamServer())
+                                    .append(ConnectionSettings.getIamForgetuserName()).append("username").append("?to=")
+                                    .append(java.net.URLEncoder.encode(StringUtils.defaultString(email)))
+                                    .append("&username=")
+                                    .append(java.net.URLEncoder.encode(StringUtils.defaultString((String) emailResp)))
+                                    .append("&").append(AppConstants.OPTUMID_HEADER_TARGETPORTAL).append("=")
+                                    .append(targetPortal).append("&").append(AppConstants.OPTUMID_HEADER_BRANDPORTAL)
+                                    .append("=").append(portalBrand).append("&")
+                                    .append(AppConstants.OPTUMID_HEADER_LANGUAGE).append("=")
+                                    .append(StringUtils.isEmpty(lang) || "null".equalsIgnoreCase(lang) ? "en" : lang)
+                                    .append("&userid=")
+                                    .append(java.net.URLEncoder.encode(StringUtils.defaultString((String) emailResp)))
+                                    .toString();
+                            // String content =
+                            // restTemplate.getForObject(url.trim(),String.class);
+                            String content = ConnectionSettings.getRestClient(url.trim()).getAsJson(String.class);
+                            if (StringUtils.containsIgnoreCase(content, "ERROR")) {
+                                captchaAttempts.incrFrgtUidAttempts();
+                                // logger.info("In /protected/userid/lookup
+                                // forgotusername:
+                                // Unable to send email to the user
+                                // "+(String)emailResp);
+                            }
 
-		}
-	}
+                            // logger.info("In /protected/userid/lookup
+                            // forgotusername: Sent
+                            // Email Successfully "+(String)emailResp);
+                            emailWrapper.put("code", "200");
+                            emailWrapper.put("description", "User found in records");
+                            return emailWrapper;
+                        } else {
+                            emailWrapper.put("username", (String) emailResp);
+                            logger.info("User found username" + emailResp);
+
+                            //get the respone here and send to the ui
+                            emailWrapper.put("code", "204");
+                            emailWrapper.put("description", "User found in records");
+                            return emailWrapper;
+                        }
+                    }
+                }
+
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            captchaAttempts.incrFrgtUidAttempts();
+            if ((emailResp instanceof com.optum.ogn.iam.model.Error)
+                    && StringUtils.equalsIgnoreCase(((Error) emailResp).getCode(), "404")) {
+
+                emailWrapper.put("code", "404");
+                emailWrapper.put("description", "Multiple User Accounts Found, try by adding more filters");
+                return emailWrapper;
+
+            }
+            emailWrapper.put("code", "204");
+            emailWrapper.put("description", "User is not found in records");
+            return emailWrapper;
+
+        }
+    }
 
 	/*
 	 * @RequestMapping(value = "/protected/admin/profile/key", method =
