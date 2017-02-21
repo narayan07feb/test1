@@ -440,179 +440,137 @@ public class HealthSafeIdService {
 		};
 	}
 
-	@HystrixCommand(groupKey = "HealthSafeIdService", commandKey = "getIdByEmail", commandProperties = {
-			@HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds", value = "60000"),
-			@HystrixProperty(name = "circuitBreaker.requestVolumeThreshold", value = "4"),
-			@HystrixProperty(name = "circuitBreaker.sleepWindowInMilliseconds", value = "60000"),
-			@HystrixProperty(name = "metrics.rollingStats.timeInMilliseconds", value = "180000") }, threadPoolProperties = {
-					@HystrixProperty(name = "coreSize", value = "150"),
-					@HystrixProperty(name = "metrics.rollingStats.timeInMilliseconds", value = "180000") })
-	public Future<Integer>findSharedEmailCount(final Map<String, String> filterMap, boolean onlyEmail) {
-		return new AsyncResult<Integer>() {
-			@SuppressWarnings("unchecked")
-			@Override
-			public Integer invoke() {
+	 @HystrixCommand(groupKey = "HealthSafeIdService", commandKey = "findSharedEmailCount", commandProperties = {
+            @HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds", value = "60000"),
+            @HystrixProperty(name = "circuitBreaker.requestVolumeThreshold", value = "4"),
+            @HystrixProperty(name = "circuitBreaker.sleepWindowInMilliseconds", value = "60000"),
+            @HystrixProperty(name = "metrics.rollingStats.timeInMilliseconds", value = "180000") }, threadPoolProperties = {
+            @HystrixProperty(name = "coreSize", value = "150"),
+            @HystrixProperty(name = "metrics.rollingStats.timeInMilliseconds", value = "180000") })
+    public Future<Object>findSharedEmailCount(final Map<String, String> filterMap, final boolean onlyEmail) {
+        return new AsyncResult<Object>() {
+            @SuppressWarnings("unchecked")
+            @Override
+            public Object invoke() {
 
-				String emailString = ((filterMap.get("email")));
-				String firstNameString = filterMap.get("firstName");
-				String lastNameString = filterMap.get("lastName");
-				String dateOfBirth = filterMap.get("dateOfBirth");
-				if (StringUtils.isBlank(dateOfBirth))
-					dateOfBirth = filterMap.get("dob");
-				String phone = filterMap.get("phone");
-				Filter filter = null;
+                String emailString = ((filterMap.get("email")));
+                String firstNameString = filterMap.get("firstName");
+                String lastNameString = filterMap.get("lastName");
+                String dateOfBirth = filterMap.get("dateOfBirth");
+                if (StringUtils.isBlank(dateOfBirth))
+                    dateOfBirth = filterMap.get("dob");
+                String phone = filterMap.get("phone");
+                Filter filter = null;
 
-				SearchArguments searchArguments = new SearchArguments();
-				ArrayList<Filter> filterList = new ArrayList<Filter>();
+                SearchArguments searchArguments = new SearchArguments();
+                ArrayList<Filter> filterList = new ArrayList<Filter>();
 
-				if (emailString != null) {
+                if (emailString != null) {
 
-					filter = new Filter();
-					filter.setKey("emails");
-					filter.setValue(((filterMap.get("email"))));
-					filterList.add(filter);
-				}
+                    filter = new Filter();
+                    filter.setKey("emails");
+                    filter.setValue(((filterMap.get("email"))));
+                    filterList.add(filter);
+                }
+            if(!onlyEmail) {
 
-				if (firstNameString != null) {
+                if (firstNameString != null) {
 
-					filter = new Filter();
-					filter.setKey("firstName");
-					filter.setValue(filterMap.get("firstName"));
-					filterList.add(filter);
-				}
+                    filter = new Filter();
+                    filter.setKey("firstName");
+                    filter.setValue(filterMap.get("firstName"));
+                    filterList.add(filter);
+                }
 
-				if (lastNameString != null) {
+                if (lastNameString != null) {
 
-					filter = new Filter();
-					filter.setKey("lastName");
-					filter.setValue(filterMap.get("lastName"));
-					filterList.add(filter);
-				}
-				if (dateOfBirth != null) {
+                    filter = new Filter();
+                    filter.setKey("lastName");
+                    filter.setValue(filterMap.get("lastName"));
+                    filterList.add(filter);
+                }
+                if (dateOfBirth != null) {
 
-					filter = new Filter();
-					filter.setKey("dateOfBirth");
-					filter.setValue(dateOfBirth);
-					filterList.add(filter);
-				}
-				if (phone != null) {
-					Filter filter1 = new Filter();
-					filter1.setKey("phoneNumbers.areaCode");
-					filter1.setValue(phone.substring(0, 3));
-					filterList.add(filter1);
+                    filter = new Filter();
+                    filter.setKey("dateOfBirth");
+                    filter.setValue(dateOfBirth);
+                    filterList.add(filter);
+                }
+                if (phone != null) {
+                    Filter filter1 = new Filter();
+                    filter1.setKey("phoneNumbers.areaCode");
+                    filter1.setValue(phone.substring(0, 3));
+                    filterList.add(filter1);
 
-					Filter filter2 = new Filter();
-					filter2.setKey("phoneNumbers.number");
-					filter2.setValue(phone.substring(3, 10));
-					filterList.add(filter2);
+                    Filter filter2 = new Filter();
+                    filter2.setKey("phoneNumbers.number");
+                    filter2.setValue(phone.substring(3, 10));
+                    filterList.add(filter2);
 
-					Filter filter3 = new Filter();
-					filter3.setKey("phoneNumbers.label");
-					filter3.setValue("MOBILE");
-					filterList.add(filter3);
+                    Filter filter3 = new Filter();
+                    filter3.setKey("phoneNumbers.label");
+                    filter3.setValue("MOBILE");
+                    filterList.add(filter3);
 
-					Filter filter4 = new Filter();
-					filter4.setKey("phoneNumbers.countryCode");
-					filter4.setValue("1");
-					filterList.add(filter4);
-				}
+                    Filter filter4 = new Filter();
+                    filter4.setKey("phoneNumbers.countryCode");
+                    filter4.setValue("1");
+                    filterList.add(filter4);
+                }
+            }
+                searchArguments.setFilter(filterList);
+                SearchParameters parameters = new SearchParameters();
+                parameters.setSearcharguments(searchArguments);
+                // MultiValueMap<String, String> headers = new
+                // LinkedMultiValueMap<String, String>();
+                // headers.add("Accept", MediaType.APPLICATION_JSON.toString());
+                // HttpEntity request = new
+                // HttpEntity<SearchParameters>(parameters,headers);
+                // RestTemplate restTemplate = new RestTemplate();
+                // ResponseEntity<String> response = null;
+                String response = null;
+                try {
+                    // response = restTemplate.exchange(new
+                    // URI(ConnectionSettings.getIamServer()+ConnectionSettings.getIamProfileByEmailRes()),
+                    // HttpMethod.POST, request, String.class);
+                    // response = restTemplate.exchange(new
+                    // URI("http://healthsafeidservices10-wdtdev1.ose.optum.com/api/secure/v1/user/lookup"),
+                    // HttpMethod.POST, request, String.class);
+                    response = ConnectionSettings
+                            .getSecureRestClient(
+                                    ConnectionSettings.getIamServer() + ConnectionSettings.getIamProfileByEmailRes())
+                            .postJson(parameters, String.class);
+                    ObjectMapper mapper = new ObjectMapper();
+                    mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+                    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                    Response user = mapper.readValue(response, Response.class);
+                    String uuid = null;
+                    if (user != null && StringUtils.equalsIgnoreCase(user.getStatus().toString(), "SUCCESS")
+                            && user.getInfo() == null) {
+                        Resources resources = user.getResources();
+                        if (resources != null && resources.getResource() != null) {
+                            return resources.getResource().size();
 
-				searchArguments.setFilter(filterList);
-				SearchParameters parameters = new SearchParameters();
-				parameters.setSearcharguments(searchArguments);
-				// MultiValueMap<String, String> headers = new
-				// LinkedMultiValueMap<String, String>();
-				// headers.add("Accept", MediaType.APPLICATION_JSON.toString());
-				// HttpEntity request = new
-				// HttpEntity<SearchParameters>(parameters,headers);
-				// RestTemplate restTemplate = new RestTemplate();
-				// ResponseEntity<String> response = null;
-				String response = null;
-				try {
-					// response = restTemplate.exchange(new
-					// URI(ConnectionSettings.getIamServer()+ConnectionSettings.getIamProfileByEmailRes()),
-					// HttpMethod.POST, request, String.class);
-					// response = restTemplate.exchange(new
-					// URI("http://healthsafeidservices10-wdtdev1.ose.optum.com/api/secure/v1/user/lookup"),
-					// HttpMethod.POST, request, String.class);
-					response = ConnectionSettings
-							.getSecureRestClient(
-									ConnectionSettings.getIamServer() + ConnectionSettings.getIamProfileByEmailRes())
-							.postJson(parameters, String.class);
-					ObjectMapper mapper = new ObjectMapper();
-					mapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
-					mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-					Response user = mapper.readValue(response, Response.class);
-					String uuid = null;
-					if (user != null && StringUtils.equalsIgnoreCase(user.getStatus().toString(), "SUCCESS")
-							&& user.getInfo() == null) {
-						Resources resources = user.getResources();
-						if (resources != null && resources.getResource() != null
-								&& resources.getResource().size() == 1) {
-							Resource resource = resources.getResource().get(0);
-							IdentificationData data = resource.getUserIdentificationData();
-							if (data != null) {
-								logger.info("username : " + data.getUserName().getValue());
-								return data.getUserName().getValue();
-							}
+                        }
+                    }
+                        return 0;
 
-							// For more than one user
-						} else if (resources != null && resources.getResource() != null
-								&& resources.getResource().size() > 1) {
-							ArrayList<ProvisionRequest> provisionlist = new ArrayList<>();
-							ProvisionRequest request = new ProvisionRequest();
-							for (Resource resourceList : resources.getResource()) {
-								uuid = resourceList.getUserIdentificationData().getUUID().getValue();
-								String userName = resourceList.getUserIdentificationData().getUserName().getValue();
-								request.setOptumId(uuid);
-								provisionlist.add(request);
-								filterMap.put(uuid, userName);
-							}
-							if (!provisionlist.isEmpty() && ProvisionDataStoreService != null) {
-								List<GetMemberAttrResponse> memberlist = ProvisionDataStoreService
-										.getMembers(provisionlist, false).get();
-								if (memberlist == null || memberlist.size() == 0) {
-									// No record found case
-									return userNotFoundError();
-								} else if (memberlist.size() > 1) {
-									// ask for customer care
-									com.optum.ogn.iam.model.Error error = new com.optum.ogn.iam.model.Error();
-									error.setCode("404");
-									error.setDescription("Multiple User Accounts Found, try by adding more filters");
-									return error;
-								} else {
-									// means found valid customer
-									GetMemberAttrResponse attrResponse = memberlist.get(0);
-
-									String validUuid = attrResponse.getHealthSafeId();
-									// retun username
-									if (validUuid != null) {
-										String username = filterMap.get(validUuid);
-										logger.info("Result Username from more than one username " + username);
-										return username;
-									}
-								}
-							}
-						}
-					} else {
-						return userNotFoundError();
-					}
-				} catch (RestClientException | IOException e) {
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (ExecutionException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				com.optum.ogn.iam.model.Error error = new com.optum.ogn.iam.model.Error();
-				error.setCode("500");
-				error.setDescription("Internal Server Exception");
-				return error;
-			}
-		};
-	}
+                } catch (RestClientException | IOException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (ExecutionException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                com.optum.ogn.iam.model.Error error = new com.optum.ogn.iam.model.Error();
+                error.setCode("500");
+                error.setDescription("Internal Server Exception");
+                return error;
+            }
+        };
+    }
 
 	
 	private Error userNotFoundError() {
