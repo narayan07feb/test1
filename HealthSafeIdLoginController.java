@@ -813,62 +813,65 @@ public class HealthSafeIdLoginController extends ScopeBasedController {
 		return cipherWrapper;
 	}
 
-	@RequestMapping(value = "/protected/userid", method = { RequestMethod.POST }, produces = { "application/json" })
-	@ResponseBody
-	public Map<String, String> lookupUserIdByEmail(@RequestBody Map<String, String> emailRequest) {
+	 @RequestMapping(value = "/protected/userid", method = { RequestMethod.POST }, produces = { "application/json" })
+    @ResponseBody
+    public Map<String, String> lookupUserIdByEmail(@RequestBody Map<String, String> emailRequest) {
 
-		Map<String, String> emailWrapper = new HashedMap();
-		String email = emailRequest.get("email");
-		String userId = email;
+        Map<String, String> emailWrapper = new HashedMap();
+        String email = emailRequest.get("email");
+        String userId = email;
 
-		logger.info("In /protected/userid ");
+        logger.info("In /protected/userid ");
+        String uuid;
+        if (EmailValidator.getInstance().isValid(email)) {
+            try {
 
-		if (EmailValidator.getInstance().isValid(email)) {
-			try {
+                Object emailResp = healthSafeIdService.getID(emailRequest).get();
+                if ((emailResp instanceof String) && StringUtils.isNotBlank(emailResp.toString())) {
+                    userId = emailResp.toString();
+                } else if ((emailResp instanceof com.optum.ogn.iam.model.Error)
+                        && StringUtils.equalsIgnoreCase(((Error) emailResp).getCode(), "404")) {
+                    uuid = healthSafeIdService.getUUIDByUserId(userId).get();
+                    if(!StringUtils.isNotBlank(uuid)) {
+                        emailWrapper.put("code", "404");
+                        emailWrapper.put("description", "Multiple User Accounts Found, try by adding more filters");
+                        return emailWrapper;
+                    }
+                }
 
-				Object emailResp = healthSafeIdService.getID(emailRequest).get();
-				if ((emailResp instanceof String) && StringUtils.isNotBlank(emailResp.toString())) {
-					userId = emailResp.toString();
-				} else if ((emailResp instanceof com.optum.ogn.iam.model.Error)
-						&& StringUtils.equalsIgnoreCase(((Error) emailResp).getCode(), "404")) {
-					emailWrapper.put("code", "404");
-					emailWrapper.put("description", "Multiple User Accounts Found, try by adding more filters");
-					return emailWrapper;
-				}
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
 
-			} catch (InterruptedException | ExecutionException e) {
-				e.printStackTrace();
-			}
-		}
+        loginAttempt.setCurrentInput(email, userId);
 
-		loginAttempt.setCurrentInput(email, userId);
+        if (StringUtils.isNotBlank(userId)) {
+            try {
+                if(!StringUtils.isNotBlank(uuid)) {
+                    uuid = healthSafeIdService.getUUIDByUserId(userId).get();
+                }
+                if (StringUtils.isNotBlank(uuid)) {
+                    GetMemberAttrResponse enrolledSites = provisionDataStoreService.getEnrolledSiteByUUID(uuid).get();
+                    if (enrolledSites != null && StringUtils.isNotBlank(enrolledSites.getMdmTermAndConditions())) {
+                        emailWrapper.put("termsAgreeDate", enrolledSites.getMdmTermAndConditions());
+                    }
+                }
 
-		if (StringUtils.isNotBlank(userId)) {
-			try {
-				String uuid = healthSafeIdService.getUUIDByUserId(userId).get();
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
 
-				if (StringUtils.isNotBlank(uuid)) {
-					GetMemberAttrResponse enrolledSites = provisionDataStoreService.getEnrolledSiteByUUID(uuid).get();
-					if (enrolledSites != null && StringUtils.isNotBlank(enrolledSites.getMdmTermAndConditions())) {
-						emailWrapper.put("termsAgreeDate", enrolledSites.getMdmTermAndConditions());
-					}
-				}
+        if (EmailValidator.getInstance().isValid(email)) {
+            String encryptedUserId = CryptoUtil.encryptUIString(userId, loginAttempt.getBase64Key());
+            emailWrapper.put("userId_enc", encryptedUserId);
+        } else {
+            emailWrapper.put("userId", userId);
+        }
 
-			} catch (InterruptedException | ExecutionException e) {
-				e.printStackTrace();
-			}
-		}
-
-		if (EmailValidator.getInstance().isValid(email)) {
-			String encryptedUserId = CryptoUtil.encryptUIString(userId, loginAttempt.getBase64Key());
-			emailWrapper.put("userId_enc", encryptedUserId);
-		} else {
-			emailWrapper.put("userId", userId);
-		}
-
-		return emailWrapper;
-	}
-
+        return emailWrapper;
+    }
 	@RequestMapping(value = "/protected/challanges", method = { RequestMethod.GET }, produces = { "application/json" })
 	@ResponseBody
 	public Object getChallanges() {
